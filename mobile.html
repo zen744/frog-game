@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frog Puzzle Game</title>
+
+<style>
+  body {
+    font-family: Arial;
+    text-align: center;
+    background: #111;
+    color: white;
+    margin: 0;
+    padding: 10px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  #grid {
+    display: grid;
+    gap: 3px;
+    margin: 15px auto;
+    width: 95vw;
+    max-width: 500px;
+  }
+
+  .cell {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 4vw;
+    max-font-size: 18px;
+
+    font-weight: bold;
+    touch-action: manipulation;
+  }
+
+  .white { background: #eee; color: black; }
+  .blue { background: #4da6ff; }
+  .red { background: #ff4d4d; }
+
+  .player {
+    background: #0066cc;
+    color: white;
+  }
+
+  textarea {
+    width: 90%;
+    max-width: 400px;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+
+  input {
+    font-size: 16px;
+    padding: 6px;
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  button {
+    font-size: 16px;
+    padding: 12px;
+    margin: 6px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 300px;
+  }
+
+  input[type="range"] {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #speedValue {
+    display: block;
+    margin-top: 5px;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>🐸 Frog Puzzle Game</h2>
+
+<button onclick="startGame()">Start Game</button>
+
+<input id="startPosInput" placeholder="Start position e.g. 3,4">
+<button onclick="applyStartPosition()">Set Start</button>
+
+<textarea id="solutionInput" rows="3"
+placeholder="Enter moves: A B C D or ABCD"></textarea>
+
+<label>Animation Speed</label>
+<input type="range" id="speedSlider" min="50" max="1000" value="300">
+<span id="speedValue">300 ms</span>
+
+<button onclick="playSolution()">▶ Play Solution</button>
+
+<div id="grid"></div>
+
+<script>
+let grid = [];
+let size;
+let frog = {x:0, y:0};
+let moveCount = 1;
+let moveNumbers = [];
+let animationRunning = false;
+let animationSpeed = 300;
+
+// slider
+const slider = document.getElementById("speedSlider");
+const speedText = document.getElementById("speedValue");
+
+slider.oninput = function() {
+  animationSpeed = this.value;
+  speedText.textContent = this.value + " ms";
+};
+
+function startGame() {
+  size = parseInt(prompt("Enter grid size (e.g. 6, 10, 20):"));
+  if (!size || size < 2) return;
+
+  setStart(0,0);
+}
+
+function setStart(x, y) {
+  grid = Array.from({length: size}, () => Array(size).fill("white"));
+  moveNumbers = Array.from({length: size}, () => Array(size).fill(""));
+
+  frog = {x, y};
+  grid[y][x] = "blue";
+
+  moveCount = 1;
+  moveNumbers[y][x] = moveCount;
+
+  drawGrid();
+}
+
+function applyStartPosition() {
+  const input = document.getElementById("startPosInput").value.trim();
+
+  if (!input) {
+    setStart(0,0);
+    return;
+  }
+
+  let parts = input.split(",");
+  if (parts.length !== 2) return alert("Use format x,y");
+
+  let x = parseInt(parts[0]);
+  let y = parseInt(parts[1]);
+
+  if (x<0 || y<0 || x>=size || y>=size) {
+    alert("Out of bounds");
+    return;
+  }
+
+  setStart(x,y);
+}
+
+function drawGrid() {
+  const container = document.getElementById("grid");
+  container.innerHTML = "";
+  container.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const cell = document.createElement("div");
+
+      let cls = "cell " + grid[y][x];
+      if (x === frog.x && y === frog.y) cls += " player";
+
+      cell.className = cls;
+      cell.textContent = moveNumbers[y][x] || "";
+
+      cell.onclick = () => {
+        if (!animationRunning) move(x,y);
+      };
+
+      container.appendChild(cell);
+    }
+  }
+}
+
+function move(x, y) {
+  const dx = x - frog.x;
+  const dy = y - frog.y;
+
+  if (Math.abs(dx)>1 || Math.abs(dy)>1) return;
+  if (grid[y][x] !== "white") return;
+
+  let dir = {dx:Math.sign(dx), dy:Math.sign(dy)};
+  let nx = x + dir.dx;
+  let ny = y + dir.dy;
+
+  if (nx>=0 && nx<size && ny>=0 && ny<size) {
+    if (grid[ny][nx] === "blue") return;
+  }
+
+  frog = {x,y};
+  grid[y][x] = "blue";
+
+  moveCount++;
+  moveNumbers[y][x] = moveCount;
+
+  if (nx>=0 && nx<size && ny>=0 && ny<size) {
+    if (grid[ny][nx] === "white") grid[ny][nx] = "red";
+  }
+
+  drawGrid();
+  return checkGame();
+}
+
+function playSolution() {
+  const input = document.getElementById("solutionInput").value.trim();
+  if (!input) return;
+
+  const moves = input.includes(" ") ? input.split(/\s+/) : input.split("");
+
+  let map = {
+    A:{dx:1,dy:0}, B:{dx:1,dy:1}, C:{dx:0,dy:1}, D:{dx:-1,dy:1},
+    E:{dx:-1,dy:0}, F:{dx:-1,dy:-1}, G:{dx:0,dy:-1}, H:{dx:1,dy:-1}
+  };
+
+  let i = 0;
+  animationRunning = true;
+
+  function step() {
+    if (i >= moves.length) {
+      animationRunning = false;
+      return;
+    }
+
+    let m = moves[i].toUpperCase();
+    let d = map[m];
+
+    if (d) {
+      let ended = move(frog.x + d.dx, frog.y + d.dy);
+      if (ended) {
+        animationRunning = false;
+        return;
+      }
+    }
+
+    i++;
+    setTimeout(step, animationSpeed);
+  }
+
+  step();
+}
+
+function checkGame() {
+  let hasWhite = grid.some(r => r.includes("white"));
+
+  if (!hasWhite) {
+    setTimeout(() => {
+      if (confirm("🎉 You Win!")) startGame();
+    },100);
+    return true;
+  }
+
+  let dirs = [
+    [1,0],[1,1],[0,1],[-1,1],
+    [-1,0],[-1,-1],[0,-1],[1,-1]
+  ];
+
+  let canMove = false;
+
+  for (let d of dirs) {
+    let nx = frog.x + d[0];
+    let ny = frog.y + d[1];
+
+    if (nx>=0 && nx<size && ny>=0 && ny<size) {
+      if (grid[ny][nx] === "white") {
+        let nnx = nx + d[0];
+        let nny = ny + d[1];
+
+        if (
+          nnx<0 || nnx>=size ||
+          nny<0 || nny>=size ||
+          grid[nny][nnx] !== "blue"
+        ) {
+          canMove = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!canMove) {
+    setTimeout(() => {
+      if (confirm("❌ No moves left!")) startGame();
+    },100);
+    return true;
+  }
+
+  return false;
+}
+</script>
+
+</body>
+</html>
