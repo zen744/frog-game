@@ -51,6 +51,10 @@
     padding: 10px;
     margin-top: 10px;
   }
+
+  #speedValue {
+    margin-left: 8px;
+  }
 </style>
 </head>
 
@@ -67,6 +71,13 @@
 <br>
 <textarea id="solutionInput" rows="4" cols="40"
 placeholder="Enter moves like: A B C D or ABCD"></textarea>
+
+<br>
+
+<label>Animation Speed:</label>
+<input type="range" id="speedSlider" min="50" max="1000" value="300">
+<span id="speedValue">300 ms</span>
+
 <br>
 <button onclick="playSolution()">▶ Play Solution</button>
 
@@ -79,6 +90,16 @@ let frog = {x:0, y:0};
 let moveCount = 1;
 let moveNumbers = [];
 let animationRunning = false;
+let animationSpeed = 300;
+
+// slider setup
+const slider = document.getElementById("speedSlider");
+const speedText = document.getElementById("speedValue");
+
+slider.oninput = function() {
+  animationSpeed = this.value;
+  speedText.textContent = this.value + " ms";
+};
 
 function startGame() {
   size = parseInt(prompt("Enter grid size (e.g. 6, 10, 20):"));
@@ -89,7 +110,6 @@ function startGame() {
 
   animationRunning = false;
 
-  // default start
   setStart(0,0);
 }
 
@@ -238,14 +258,13 @@ function playSolution() {
     }
 
     i++;
-    setTimeout(step, 300);
+    setTimeout(step, animationSpeed);
   }
 
   step();
 }
 
 function checkGame() {
-  // WIN
   let hasWhite = grid.some(row => row.includes("white"));
 
   if (!hasWhite) {
@@ -257,7 +276,6 @@ function checkGame() {
     return true;
   }
 
-  // LOSE
   let canMove = false;
 
   const directions = [
