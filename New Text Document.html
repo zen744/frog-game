@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Frog Puzzle Game</title>
+<style>
+  body {
+    font-family: Arial;
+    text-align: center;
+    background: #111;
+    color: white;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #grid {
+    display: grid;
+    gap: 2px;
+    margin: 20px auto;
+  }
+
+  .cell {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+  }
+
+  .white { background: #eee; }
+  .blue { background: #4da6ff; }
+  .red { background: #ff4d4d; }
+
+  /* ✅ player highlight (no movement) */
+  .player {
+    background: #0066cc;
+  }
+
+  button {
+    padding: 10px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h2>🐸 Frog Puzzle Game</h2>
+<button onclick="startGame()">Start Game</button>
+
+<div id="grid"></div>
+
+<script>
+let grid = [];
+let size;
+let frog = {x:0, y:0};
+
+const directions = [
+  {dx:1, dy:0},
+  {dx:1, dy:1},
+  {dx:0, dy:1},
+  {dx:-1, dy:1},
+  {dx:-1, dy:0},
+  {dx:-1, dy:-1},
+  {dx:0, dy:-1},
+  {dx:1, dy:-1}
+];
+
+function startGame() {
+  size = parseInt(prompt("Enter grid size (e.g. 6, 10, 20):"));
+  if (!size || size < 2) return;
+
+  grid = Array.from({length: size}, () => Array(size).fill("white"));
+  frog = {x:0, y:0};
+  grid[0][0] = "blue";
+
+  drawGrid();
+}
+
+function drawGrid() {
+  const container = document.getElementById("grid");
+  container.innerHTML = "";
+  container.style.gridTemplateColumns = `repeat(${size}, 30px)`;
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const cell = document.createElement("div");
+
+      let className = "cell " + grid[y][x];
+
+      /* ✅ highlight current player only */
+      if (x === frog.x && y === frog.y) {
+        className += " player";
+      }
+
+      cell.className = className;
+      cell.onclick = () => move(x, y);
+
+      container.appendChild(cell);
+    }
+  }
+}
+
+function move(x, y) {
+  const dx = x - frog.x;
+  const dy = y - frog.y;
+
+  let dir = directions.find(d => d.dx === Math.sign(dx) && d.dy === Math.sign(dy));
+  if (!dir) return;
+
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return;
+  if (grid[y][x] !== "white") return;
+
+  let nx = x + dir.dx;
+  let ny = y + dir.dy;
+
+  if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+    if (grid[ny][nx] === "blue") return;
+  }
+
+  frog = {x, y};
+  grid[y][x] = "blue";
+
+  if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+    if (grid[ny][nx] === "white") {
+      grid[ny][nx] = "red";
+    }
+  }
+
+  drawGrid();
+  checkGame();
+}
+
+function checkGame() {
+  let hasWhite = grid.some(row => row.includes("white"));
+
+  if (!hasWhite) {
+    setTimeout(() => {
+      if (confirm("🎉 You Win! Restart?")) {
+        startGame();
+      }
+    }, 100);
+    return;
+  }
+
+  let canMove = false;
+
+  for (let d of directions) {
+    let nx = frog.x + d.dx;
+    let ny = frog.y + d.dy;
+
+    if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+      if (grid[ny][nx] === "white") {
+        let nnx = nx + d.dx;
+        let nny = ny + d.dy;
+
+        if (
+          nnx < 0 || nnx >= size || nny < 0 || nny >= size ||
+          grid[nny][nnx] !== "blue"
+        ) {
+          canMove = true;
+        }
+      }
+    }
+  }
+
+  if (!canMove) {
+    setTimeout(() => {
+      if (confirm("❌ No moves left! Restart?")) {
+        startGame();
+      }
+    }, 100);
+  }
+}
+</script>
+
+</body>
+</html>
